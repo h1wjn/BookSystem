@@ -1,0 +1,103 @@
+@page "/Register"
+@inject NavigationManager Navigation
+
+@using BooksSystem.Models
+@using BooksSystem.Data
+@inject BooksContext _context
+
+<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;">
+    <h3 style="text-align: center; margin-bottom: 15px;">注册</h3>
+
+    <EditForm Model="@newCustomer" OnValidSubmit="HandleRegister">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group">
+            <label for="username" style="font-weight: bold;">用户名</label>
+            <InputText id="username" style="background-color: #f4f4f4; border-radius: 8px; padding: 8px; width: 100%; max-width: 350px;" @bind-Value="newCustomer.UserName" placeholder="请输入用户名" />
+        </div>
+
+        <div class="form-group">
+            <label for="password" style="font-weight: bold;">密码</label>
+            <InputText id="password" style="background-color: #f4f4f4; border-radius: 8px; padding: 8px; width: 100%; max-width: 350px;" type="password" @bind-Value="newCustomer.Password" placeholder="请输入密码" />
+        </div>
+
+        <div class="form-group">
+            <label for="confirmPassword" style="font-weight: bold;">确认密码</label>
+            <InputText id="confirmPassword" style="background-color: #f4f4f4; border-radius: 8px; padding: 8px; width: 100%; max-width: 350px;" type="password" @bind-Value="confirmPassword" placeholder="请再次输入密码" />
+        </div>
+
+        <div class="form-group">
+            <label for="phoneNumber" style="font-weight: bold;">电话号</label>
+            <InputText id="phoneNumber" style="background-color: #f4f4f4; border-radius: 8px; padding: 8px; width: 100%; max-width: 350px;" @bind-Value="newCustomer.PhoneNumber" placeholder="请输入电话号" />
+        </div>
+
+        <div class="form-group" style="text-align: center; margin-top: 15px;">
+            <button type="submit" style="background-color: #007bff; color: white; border: none; border-radius: 8px; padding: 10px 15px; font-size: 14px; width: 100%; max-width: 350px;">注册</button>
+        </div>
+    </EditForm>
+
+    @if (isRegistrationSuccess)
+    {
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center;">
+            <div style="background-color: #f9f9f9; border-radius: 8px; width: 320px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);">
+                <div style="background-color: #007bff; color: white; padding: 10px; border-top-left-radius: 8px; border-top-right-radius: 8px; text-align: center;">
+                    <h5 class="modal-title" style="margin: 0;">注册成功</h5>
+                </div>
+                <div style="padding: 20px; text-align: center;">
+                    <p>您的账号已经注册成功！</p>
+                </div>
+                <div style="text-align: center; padding: 10px;">
+                    <button style="background-color: #007bff; color: white; border: none; border-radius: 8px; padding: 8px 20px;" @onclick="RedirectToHome">确定</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">
+            @errorMessage
+        </div>
+    }
+</div>
+
+@code {
+    private Customer newCustomer = new Customer();
+    private string confirmPassword;
+    private bool isRegistrationSuccess = false;
+    private string errorMessage = null;
+    private async Task HandleRegister()
+    {
+        if (newCustomer.Password != confirmPassword)
+        {
+            errorMessage = "两次密码输入不一致，请重新输入！";
+            return;
+        }
+        bool isRegistered = await RegisterCustomerAsync(newCustomer);
+        if (isRegistered)
+        {
+            isRegistrationSuccess = true;
+        }
+    }
+
+    private async Task<bool> RegisterCustomerAsync(Customer customer)
+    {
+       try
+        {
+            customer.MaxNum = 3;
+            _context.Customer.Add(customer);
+            await _context.SaveChangesAsync();  // 保存更改到数据库
+            return true;  // 注册成功
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    private void RedirectToHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

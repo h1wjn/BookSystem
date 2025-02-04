@@ -1,0 +1,87 @@
+@page "/issueCard"
+@inject AuthenticationService AuthService
+@inject NavigationManager NavigationManager
+@using BooksSystem.Models
+@using BooksSystem.Data
+@using Microsoft.EntityFrameworkCore
+@inject BooksContext DbContext
+<h3 style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px;">办理借书证</h3>
+
+@if (AuthService.IsLoggedIn)
+{
+    <EditForm Model="bookCard" OnValidSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div style="max-width: 400px; margin: 0 auto;">
+        <div style="margin-bottom: 15px;">
+            <label for="name">姓名:</label>
+            <InputText @bind-Value="bookCard.Name" id="name" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" placeholder="请输入您的姓名" />
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="phoneNumber">联系电话:</label>
+            <InputText @bind-Value="bookCard.PhoneNumber" id="phoneNumber" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" placeholder="请输入您的联系电话" />
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="address">地址:</label>
+            <InputText @bind-Value="bookCard.Address" id="address" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" placeholder="请输入您的地址" />
+        </div>
+
+        <button type="submit" style="width: 100%; padding: 10px; background-color: #8A2BE2; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">提交申请</button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <p style="color: green; text-align: center; margin-top: 10px;">@successMessage</p>
+    }
+    </EditForm>
+}
+else
+{
+    <div style="max-width: 500px; margin: 50px auto; padding: 20px; background-color: #ffe5e5; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; align-items: center; text-align: center;">
+    <div style="width: 60px; height: 60px; background-color: #ffcccc; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+        <span style="font-size: 32px; color: #cc0000;">&#9888;</span> <!-- 警告图标 -->
+    </div>
+    <p style="color: #cc0000; font-size: 20px; font-weight: bold; margin-bottom: 10px;">访问受限</p>
+    <p style="color: #333; font-size: 16px; line-height: 1.5;">您还未登录，请先登录以申请借书证。</p>
+    <a href="/login" style="margin-top: 20px; padding: 10px 20px; background-color: #cc0000; color: #fff; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: bold; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);">
+        去登录
+    </a>
+</div>
+
+}
+
+@code {
+    private BookCard bookCard = new BookCard();
+    private string successMessage = string.Empty;
+
+    private async Task HandleSubmit()
+    {
+        try
+        {
+            var user = await DbContext.Customer.FirstOrDefaultAsync(u => u.Id == AuthService._currentCustomer.Id);
+            if (AuthService._currentCustomer.HasCard == 1) {
+                successMessage = "您已经办理了借书证，无需重复申请。";
+                return;
+            }
+            if (user != null)
+            {
+                user.HasCard = 1;
+                bookCard.Id = AuthService._currentCustomer.Id;
+                DbContext.BookCard.Add(bookCard);
+            }
+            // 保存更改
+            await DbContext.SaveChangesAsync();
+            // 显示成功消息
+            successMessage = "恭喜您，申请成功！";
+        }
+        catch (Exception ex)
+        {
+            // 处理错误情况
+            successMessage = $"发生错误：{ex.Message}";
+        }
+    }
+}
+

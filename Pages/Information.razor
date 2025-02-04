@@ -1,0 +1,96 @@
+@page "/borrowed-books"
+@using BooksSystem.Data
+@using BooksSystem.Models
+@using Microsoft.EntityFrameworkCore
+@inject AuthenticationService AuthenticationService
+@inject BooksContext DbContext
+@inject NavigationManager Navigation
+@using Microsoft.EntityFrameworkCore.Metadata.Internal
+
+
+<h3 class="text-center mt-3 custom-title">您的一些书籍已经到了截止日期，请您尽快归还！</h3>
+
+@if (expiredBooks.Count == 0)
+{
+    
+    Navigation.NavigateTo("/");
+    
+}
+else
+{
+    <div class="container mt-4">
+        <h4 class="text-center">您的过期书籍</h4>
+
+        <div class="row">
+            @foreach (var book in expiredBooks)
+            {
+                <div class="col-md-4 col-sm-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-img-container">
+                            <img src="/images/pic.png" alt="书籍图片" class="card-img-top" />
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">@book.bookName</h5>
+                            <p class="card-text"><strong>截止日期：</strong>@book.deadLineTime.ToString("yyyy-MM-dd HH:mm:ss")</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="text-center mt-4">
+            <button class="btn btn-primary" @onclick="GoToHomePage">确认</button>
+        </div>
+    </div>
+}
+
+@code {
+    private List<BorrowBook> expiredBooks = new List<BorrowBook>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExpiredBooksAsync();
+    }
+
+    private async Task LoadExpiredBooksAsync()
+    {
+        // 获取当前用户的借阅书籍数据
+        var borrowedBooks = DbContext.BorrowBook.Where(bb => bb.usrId == AuthenticationService.CurrentCustomer.Id).ToList();
+
+        expiredBooks = borrowedBooks.Where(bb => bb.deadLineTime < DateTime.Now).ToList();
+
+        // 如果没有过期书籍，跳转到首页
+        if (!expiredBooks.Any())
+        {
+            Navigation.NavigateTo("/");
+        }
+
+        StateHasChanged(); // 刷新页面
+    }
+
+    private void GoToHomePage()
+    {
+        // 点击确认按钮后跳转到主页
+        Navigation.NavigateTo("/");
+    }
+}
+
+<style>
+    .card-img-container {
+        width: 100%;
+        height: 200px; /* 适当调整高度以适应图片 */
+        overflow: hidden;
+    }
+
+    .card-img-top {
+        width: 100%;
+        height: 100%;
+        object-fit: contain; /* 保持图片完整显示，不裁剪 */
+    }
+     .custom-title {
+        color: #8A2BE2; /* 淡蓝紫色 */
+        font-family: "Georgia", serif; /* 使用 Arial 或其他自定义字体 */
+    }
+</style>
+
+

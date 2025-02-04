@@ -1,0 +1,123 @@
+@page "/editBook"
+@using BooksSystem.Data
+@using BooksSystem.Models
+@using Microsoft.EntityFrameworkCore
+@inject NavigationManager Navigation
+@inject BooksContext _context
+@inject IJSRuntime JS
+
+
+<h3>编辑图书</h3>
+
+<EditForm Model="@book" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-row">
+        <div class="form-group col-md-6">
+            <label for="category">分类</label>
+            <InputText id="category" class="form-control custom-input" @bind-Value="book.Category" />
+        </div>
+        <div class="form-group col-md-6">
+            <label for="bookName">书名</label>
+            <InputText id="bookName" class="form-control custom-input" @bind-Value="book.Title" />
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group col-md-6">
+            <label for="author">作者</label>
+            <InputText id="author" class="form-control custom-input" @bind-Value="book.Author" />
+        </div>
+        <div class="form-group col-md-6">
+            <label for="publisher">出版社</label>
+            <InputText id="publisher" class="form-control custom-input" @bind-Value="book.Press" />
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group col-md-6">
+            <label for="publishDate">出版时间</label>
+            <InputDate id="publishDate" class="form-control custom-input" @bind-Value="book.Pubtime" />
+        </div>
+        <div class="form-group col-md-6">
+            <label for="description">简介</label>
+            <InputTextArea id="description" class="form-control custom-input" @bind-Value="book.Description" />
+        </div>
+    </div>
+
+    <!-- 是否可借 -->
+    <div class="form-row">
+        <div class="form-group col-md-6">
+            <label for="enabled">是否可借</label>
+            <InputRadioGroup @bind-Value="book.Enabled" TValue="bool">
+                <div class="form-check form-check-inline">
+                    <InputRadio id="enabledYes" class="form-check-input" Value="true" />
+                    <label class="form-check-label" for="enabledYes">可以借</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <InputRadio id="enabledNo" class="form-check-input" Value="false" />
+                    <label class="form-check-label" for="enabledNo">不可借</label>
+                </div>
+            </InputRadioGroup>
+        </div>
+    </div>
+
+
+    <button type="submit" class="btn btn-primary">保存</button>
+</EditForm>
+
+@code {
+    private Book book = new Book();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var bookId = new Uri(Navigation.Uri).Query.Substring(1).Split('&')
+        .FirstOrDefault(x => x.StartsWith("bookId"))
+        ?.Split('=')[1];
+        if (bookId != null && int.TryParse(bookId, out var id))
+        {
+            // 查询数据库获取该图书信息
+            book = await _context.Books.FindAsync(id);
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            _context.Update(book);
+            await _context.SaveChangesAsync();
+            // 使用 alert 弹窗
+            await JS.InvokeVoidAsync("eval", "alert('图书信息已成功保存！')");
+            Navigation.NavigateTo("/bookmanage");
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("eval", $"alert('保存失败：{ex.Message}')");
+        }
+    }
+}
+<style>
+    .custom-input {
+        border: 2px solid #007bff;
+        /* 蓝色边框 */
+        border-radius: 5px;
+        padding: 10px;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.2);
+        /* 增加阴影效果 */
+    }
+
+    .custom-input:focus {
+        border-color: #0056b3;
+        /* 聚焦时的边框颜色 */
+        box-shadow: 0 0 5px rgba(0, 86, 179, 0.6);
+        /* 聚焦时的阴影 */
+    }
+    .form-check-inline {
+    display: inline-flex;
+    align-items: center;
+}
+
+</style>

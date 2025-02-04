@@ -1,0 +1,94 @@
+﻿@page "/login"
+@inject NavigationManager NavigationManager
+@inject AuthenticationService AuthService
+@inject BooksContext _context  
+@using BooksSystem.Data
+@using BooksSystem.Models
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.EntityFrameworkCore.Metadata.Internal
+@inject NavigationManager Navigation
+
+<div style="max-width: 400px; margin: 50px auto; padding: 30px; background: linear-gradient(145deg, #ffffff, #e6e6e6); border-radius: 12px; box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);">
+    <h2 style="text-align: center; margin-bottom: 25px; font-size: 26px; font-weight: bold; color: #4B0082;">登录</h2>
+    <EditForm Model="Customer" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div style="position: relative; margin-bottom: 20px;">
+            <InputText @bind-Value="Customer.UserName" placeholder="用户名"
+                       style="width: 100%; padding: 12px; padding-left: 40px; border: 1px solid #ccc; border-radius: 8px; box-shadow: inset 0px 1px 3px rgba(0, 0, 0, 0.1); font-size: 16px;" />
+            <span style="position: absolute; top: 50%; left: 12px; transform: translateY(-50%); color: #8A2BE2;">
+                &#128100;
+            </span>
+        </div>
+
+        <div style="position: relative; margin-bottom: 20px;">
+            <InputText @bind-Value="Customer.Password" placeholder="密码" type="password"
+                       style="width: 100%; padding: 12px; padding-left: 40px; border: 1px solid #ccc; border-radius: 8px; box-shadow: inset 0px 1px 3px rgba(0, 0, 0, 0.1); font-size: 16px;" />
+            <span style="position: absolute; top: 50%; left: 12px; transform: translateY(-50%); color: #8A2BE2;">
+                &#128274;
+            </span>
+        </div>
+
+        @if (AuthService.IsLoggedIn)
+        {
+            <button type="button" @onclick="HandleLogout"
+                    style="width: 100%; padding: 12px; background-color: #8A2BE2; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);">
+                登出
+            </button>
+        }
+        else
+        {
+            <button type="submit"
+                    style="width: 100%; padding: 12px; background-color: #8A2BE2; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);">
+                登录
+            </button>
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p style="color: red; text-align: center; margin-top: 15px; font-weight: bold;">@errorMessage</p>
+        }
+    </EditForm>
+</div>
+
+
+@code {
+    private Customer Customer = new Customer();
+    private string errorMessage;
+
+
+    private async Task HandleValidSubmit()
+    {
+        // 清空上一次的错误信息
+        errorMessage = null;
+        // 验证用户的用户名和密码
+        Customer user = await _context.Customer
+        .FirstOrDefaultAsync(c => c.UserName == Customer.UserName && c.Password == Customer.Password);
+        if (user != null)
+        {
+        await AuthService.LoginAsync(user);
+        Navigation.NavigateTo("/borrowed-books");
+        }
+        else
+        {
+        errorMessage = "用户名或密码错误！";
+        }
+        
+    }
+
+    private void HandleLogout()
+    {
+        // 调用登出方法
+        AuthService.Logout();
+    }
+
+    protected override void OnInitialized()
+    {
+        AuthService.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnChange -= StateHasChanged;
+    }
+}

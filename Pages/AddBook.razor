@@ -1,0 +1,204 @@
+@page "/addBook"
+@using BooksSystem.Models
+@using BooksSystem.Data
+@inject BooksContext _context
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Threading.Tasks
+@inject NavigationManager Navigation
+<div class="book-form">
+    <h4>新增书籍</h4>
+    <EditForm Model="newBook" OnValidSubmit="HandleValidSubmit">
+        <ValidationSummary />
+        <div class="container">
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="title">书名</label>
+                    <InputText id="title" class="form-control" @bind-Value="newBook.Title" />
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="author">作者</label>
+                    <InputText id="author" class="form-control" @bind-Value="newBook.Author" />
+                </div>
+            </div>
+            <hr />
+
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="publisher">出版社</label>
+                    <InputText id="publisher" class="form-control" @bind-Value="newBook.Press" />
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="publishDate">出版时间</label>
+                    <InputDate id="publishDate" class="form-control" @bind-Value="newBook.Pubtime" />
+                </div>
+            </div>
+            <hr />
+
+            <div class="form-row">
+                <div class="form-group col-md-12">
+                    <label for="description">简介</label>
+                    <InputTextArea id="description" class="form-control" @bind-Value="newBook.Description" />
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="category">分类</label>
+                    <InputSelect id="category" class="form-control" @bind-Value="newBook.Category">
+                        <option value="">请选择分类</option>
+                        <option value="人文">人文</option>
+                        <option value="经济">经济</option>
+                        <option value="科幻">科幻</option>
+                        <option value="历史">历史</option>
+                        <option value="悬疑">悬疑</option>
+                        <option value="动漫">动漫</option>
+                        <option value="言情">言情</option>
+                    </InputSelect>
+                </div>
+            </div>
+
+            <div class="form-row button-row">
+                <button type="submit" class="btn btn-primary">提交</button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelAddBook">取消</button>
+            </div>
+        </div>
+    </EditForm>
+
+    <div class="alert alert-danger" role="alert" hidden="@string.IsNullOrEmpty(errorMessage)">
+        @errorMessage
+    </div>
+
+    <div class="alert alert-success" role="alert" hidden="@string.IsNullOrEmpty(successMessage)">
+        @successMessage
+    </div>
+</div>
+
+@code{
+    private Book newBook = new Book();  // 用于绑定表单数据
+    private string errorMessage;
+    private string successMessage;
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            _context.Books.Add(newBook);
+            await _context.SaveChangesAsync();
+            successMessage = "书籍添加成功！";
+            newBook = new Book();  // 重置表单
+            errorMessage = string.Empty; // 清空错误信息
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error adding book: {ex.Message}";  // 显示错误消息
+        }
+    }
+
+    private void CancelAddBook()
+    {
+        newBook = new Book();
+        Navigation.NavigateTo("/bookmanage");
+    }
+}
+
+
+
+<style>
+.book-form {
+    background-color: #fefefe;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-width: 600px;
+    margin: 60px auto;
+}
+
+.book-form h4 {
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 22px;
+    color: #333;
+    font-weight: bold;
+}
+
+.book-form .form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.book-form .form-group {
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+.book-form .form-group label {
+    font-weight: 600;
+    font-size: 15px;
+    color: #444;
+}
+
+.book-form .form-control {
+    width: 100%;
+    padding: 10px;
+    font-size: 15px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background-color: #fafafa;
+    transition: border-color 0.3s;
+}
+
+.book-form .form-control:focus {
+    border-color: #0056b3;
+}
+
+.button-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 25px;
+}
+
+.button-row .btn {
+    width: 48%;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 6px;
+}
+
+.book-form .btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.book-form .btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.book-form .btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.book-form .btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.alert {
+    margin-top: 15px;
+    padding: 12px;
+    font-size: 15px;
+    border-radius: 6px;
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+@@media (max-width: 600px) {
+    .book-form {
+        max-width: 90%;
+        padding: 20px;
+    }
+    .button-row .btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+</style>

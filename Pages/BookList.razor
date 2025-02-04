@@ -1,0 +1,226 @@
+@page "/bookList"
+@using BooksSystem.Models
+@using BooksSystem.Data
+@using Microsoft.AspNetCore.Components
+@using Microsoft.JSInterop
+@inject BooksContext _context
+@using Microsoft.EntityFrameworkCore;
+@using Microsoft.EntityFrameworkCore.Metadata.Internal
+@inject NavigationManager Navigation
+@inject AuthenticationService AuthenticationService
+@inject IJSRuntime JS
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Threading.Tasks
+
+<h3 class="text-center mt-3">书籍列表</h3>
+
+<!-- 搜索框和搜索按钮 -->
+<div class="d-flex justify-content-center mt-3">
+    <div class="input-group" style="width: 50%;">
+        <div class="input-group-prepend">
+            <span class="input-group-text"><i class="fa fa-search"></i></span>
+        </div>
+        <InputText class="form-control" @bind-Value="searchQuery" placeholder="输入书名搜索..." />
+        <button class="btn btn-outline-primary" @onclick="SearchBooks">
+            搜索
+        </button>
+        <!-- 清除搜索按钮 -->
+        <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+            清除
+        </button>
+    </div>
+</div>
+
+<!-- 书籍列表 -->
+<div class="container mt-4">
+    <div class="row">
+        @foreach (var book in books)
+        {
+            <div class="col-6 col-md-4 col-lg-3 mb-4">
+                <div class="card shadow-sm h-100 d-flex flex-column align-items-center p-2">
+                    <img src="/images/pic.png" alt="书籍图片" class="rounded mt-2" style="width: 100px; height: 150px; object-fit: cover;">
+                    <div class="card-body text-center p-2">
+                        <h6 class="card-title text-primary font-weight-bold">@book.Title</h6>
+                        <p class="card-text mb-1"><small class="text-muted">作者: @book.Author</small></p>
+                        <p class="card-text mb-1"><small class="text-muted">出版社: @book.Press</small></p>
+                        <p class="card-text mb-2"><small class="text-muted">出版时间: @book.Pubtime.ToString("yyyy-MM-dd")</small></p>
+                        <p class="card-text text-truncate" style="max-width: 150px;"><small>简介：@book.Description</small></p>
+                    </div>
+                    <!-- 借阅按钮 -->
+                    <button class="btn btn-sm @(book.Enabled ? "btn-success" : "btn-secondary") mb-3"
+                            @onclick="() => BorrowBook(book)">
+                        <span>@(book.Enabled ? "可以借阅" : "不可借阅")</span>
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- 分页 -->
+    <div class="pagination justify-content-center mt-4">
+        <!-- 上一页按钮 -->
+        <button class="btn btn-sm btn-secondary mx-1" @onclick="() => ChangePage(currentPage - 1)" disabled="@(currentPage == 1)">
+            上一页
+        </button>
+
+        @if (totalPages <= 7)  // 如果页数少于等于7，显示所有页码
+        {
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                <button class="btn btn-sm @(i == currentPage ? "btn-primary" : "btn-outline-primary") mx-1" disabled>
+                    @i
+                </button>
+            }
+        }
+        else // 页数多于7时，简化显示
+        {
+            <!-- 显示第一页 -->
+            <button class="btn btn-sm @(1 == currentPage ? "btn-primary" : "btn-outline-primary") mx-1" disabled>
+                1
+            </button>
+            <!-- 如果当前页大于4，则显示省略号 -->
+            @if (currentPage > 4)
+            {
+                <span class="mx-1">...</span>
+            }
+            <!-- 显示当前页前后两页 -->
+            @for (int i = Math.Max(2, currentPage - 2); i <= Math.Min(totalPages - 1, currentPage + 2); i++)
+            {
+                <button class="btn btn-sm @(i == currentPage ? "btn-primary" : "btn-outline-primary") mx-1" disabled>
+                    @i
+                </button>
+            }
+            <!-- 如果当前页小于 totalPages - 3，则显示省略号 -->
+            @if (currentPage < totalPages - 3)
+            {
+                <span class="mx-1">...</span>
+            }
+            <!-- 显示最后一页 -->
+            <button class="btn btn-sm @(totalPages == currentPage ? "btn-primary" : "btn-outline-primary") mx-1" disabled>
+                @totalPages
+            </button>
+        }
+        <!-- 下一页按钮 -->
+        <button class="btn btn-sm btn-secondary mx-1" @onclick="() => ChangePage(currentPage + 1)" disabled="@(currentPage == totalPages)">
+            下一页
+        </button>
+    </div>
+</div>
+
+
+@code {
+    private string searchQuery = string.Empty;  // 用于存储搜索关键字
+    private List<Book> books = new List<Book>();
+    private int currentPage = 1;
+    private int pageSize = 12; // 每页显示12本书
+    private int totalPages;
+    private BorrowBook borrowBook = new BorrowBook();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBooks();
+    }
+
+    // 查询书籍的逻辑
+    private async Task LoadBooks()
+    {
+        var query = _context.Books.AsQueryable();
+
+        // 模糊查询
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            query = query.Where(b => b.Title.Contains(searchQuery));
+        }
+        // 分页查询
+        totalPages = (int)Math.Ceiling(await query.CountAsync() / (double)pageSize);
+        books = await query.Skip((currentPage - 1) * pageSize)
+                           .Take(pageSize)
+                           .ToListAsync();
+    }
+
+    // 搜索时点击搜索按钮
+    private async Task SearchBooks()
+    {
+        await LoadBooks();  // 点击搜索后加载书籍
+    }
+    
+    // 清除搜索并重新加载所有书籍
+    private async Task ClearSearch()
+    {
+        searchQuery = string.Empty;  // 清空搜索框
+        await LoadBooks();  // 加载所有书籍
+    }
+
+    private async Task ChangePage(int page)
+    {
+        if (page < 1 || page > totalPages) return;
+
+        // 更新当前页
+        currentPage = page;
+        
+        // 加载对应页的书籍
+        await LoadBooks();
+        
+        // 强制更新页面
+        StateHasChanged(); 
+    }
+
+
+    private async Task BorrowBook(Book book)
+{
+    // 判断用户是否已登录
+    if (AuthenticationService._currentCustomer == null)
+    {
+        await JS.InvokeVoidAsync("alert", "您还未登录，是否现在去登录？");
+        Navigation.NavigateTo("/login");
+        return;
+    }
+
+    // 获取已登录用户的 ID
+    var userId = AuthenticationService._currentCustomer.Id;
+
+    // 查询用户信息
+    var user = await _context.Customer.FindAsync(userId);
+
+    if (user == null)
+    {
+        return;
+    }
+
+    // 判断是否有借书卡
+    if (user.HasCard == 0)
+    {
+        await JS.InvokeVoidAsync("alert", "您还没有办理借书卡，是否现在去办理？");
+        Navigation.NavigateTo("/issueCard");
+        return;
+    }
+    
+    // 检查是否已达到借书上限
+    if (user.CurrentNum >= user.MaxNum)
+    {
+        await JS.InvokeVoidAsync("alert", "您借阅的书籍已达上限,请归还书籍后再借阅！");
+        return;
+    }
+
+    // 创建新的 BorrowBook 实例，确保每次借书操作是一个新的记录
+    var borrowBook = new BorrowBook
+    {
+        usrId = user.Id,
+        bookId = book.Id,
+        bookName = book.Title
+    };
+
+    // 添加借阅记录并更新图书状态
+    _context.Add(borrowBook);
+    book.Enabled = false;
+
+    // 更新借书记录和用户借书数
+    await _context.SaveChangesAsync();
+    user.CurrentNum += 1;
+    await _context.SaveChangesAsync();
+
+    await JS.InvokeVoidAsync("alert", "借阅成功！");
+}
+
+    
+}

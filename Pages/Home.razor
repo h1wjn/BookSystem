@@ -1,0 +1,117 @@
+﻿@page "/"
+@namespace BooksStore.Pages
+@inject IJSRuntime JS
+@using BooksSystem.Data
+@using Microsoft.EntityFrameworkCore
+@inject BooksContext DbContext
+@using BooksSystem.Models
+@using System.Collections.Generic
+
+<!-- 欢迎标语 -->
+<div class="welcome-message">
+    <h1 class="welcome-text">欢迎来到图书馆系统</h1>
+</div>
+
+<!-- 图书馆藏书总数和累计注册人数 -->
+<div class="library-info">
+    <h4>图书馆藏书总数: <span class="book-count">@TotalBooks</span> 本</h4>
+    <h4>累计注册人数: <span class="register-count">@RegisteredUsers</span> 人</h4>
+</div>
+
+<!-- 各类书籍柱状图 -->
+<canvas id="chartCanvas" width="800" height="400"></canvas>
+
+<script>
+    // 用于保存 Chart 实例的全局变量
+let chartInstance = null;
+window.initializeChart = (bookCategories) => {
+    const labels = Object.keys(bookCategories);
+    const dataValues = Object.values(bookCategories);
+    const ctx = document.getElementById('chartCanvas').getContext('2d');
+    // 如果已存在图表实例，则先销毁它
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
+    // 创建新的图表实例并赋值给 chartInstance
+    chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '书籍分类数量',
+                data: dataValues,
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#66BB6A'
+                ],
+                borderColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#66BB6A'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+};
+</script>
+
+@code {
+    private int TotalBooks;
+    private int RegisteredUsers;
+    private Dictionary<string, int> BookCategoryData = new Dictionary<string, int>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        TotalBooks = await DbContext.Set<Book>().CountAsync();
+        RegisteredUsers = await DbContext.Set<Customer>().CountAsync();
+        BookCategoryData = await DbContext.Set<Book>()
+            .GroupBy(b => b.Category)
+            .ToDictionaryAsync(g => g.Key, g => g.Count());
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // 每次渲染都调用 JavaScript 函数初始化图表
+        if (BookCategoryData.Count > 0)
+        {
+            await JS.InvokeVoidAsync("initializeChart", BookCategoryData);
+        }
+    }
+}
+
+
+<style>
+    .welcome-message {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .welcome-text {
+        font-size: 36px;
+        color: #2c3e50;
+        font-weight: bold;
+        background: linear-gradient(to right, #ff6a00, #d4a5a5);
+        -webkit-background-clip: text;
+        color: transparent;
+    }
+
+    .library-info {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .book-count, .register-count {
+        font-size: 24px;
+        color: #e74c3c;
+    }
+
+    #chartCanvas {
+        margin: 0 auto;
+        display: block;
+    }
+</style>

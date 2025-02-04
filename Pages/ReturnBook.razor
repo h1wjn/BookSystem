@@ -1,0 +1,199 @@
+@page "/returnBook"
+@inject IJSRuntime JS
+@using BooksSystem.Data
+@using BooksSystem.Models
+@inject NavigationManager Navigation
+@inject BooksContext _context
+@inject AuthenticationService AuthenticationService
+@using Microsoft.EntityFrameworkCore
+<h3>归还图书</h3>
+
+@if (isLoading)
+{
+    <div class="alert alert-info">正在加载借阅信息...</div>
+}
+else if (AuthenticationService.IsLoggedIn)
+{
+    @if (borrowedBooks == null || borrowedBooks.Count == 0)
+    {
+        <div class="alert alert-warning">您还没有借阅任何图书。</div>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead class="thead-dark">
+                <tr>
+                    <th>书籍名称</th>
+                    <th>借阅日期</th>
+                    <th>截至日期</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var book in borrowedBooks)
+                {
+                    <tr>
+                        <td>@book.bookName</td>
+                        <td>@book.borrowTime</td>
+                        <td>@book.deadLineTime</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" @onclick="() => returnBook(book)"
+                                style="transition: all 0.3s ease;">
+                                归还
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+else
+{
+    <div class="modal fade show" tabindex="-1" role="dialog"
+        style="display: @(showModal ? "block" : "none"); background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">未登录提示</h5>
+                    <!-- 去掉关闭按钮 -->
+                </div>
+                <div class="modal-body text-center">
+                    <p class="lead">请先登录后查看借阅信息。</p>
+                    <p>点击下方按钮跳转到登录页面。</p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button class="btn btn-primary btn-lg px-4" @onclick="RedirectToLogin">
+                        <i class="fas fa-sign-in-alt"></i> 去登录
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+}
+
+@code {
+    private List<BorrowBook> borrowedBooks;
+    private bool isLoading = true;
+    private bool showModal = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            showModal = !AuthenticationService.IsLoggedIn;
+
+            if (AuthenticationService.IsLoggedIn)
+            {
+                int userId = GetCurrentUserId();
+                borrowedBooks = await _context.BorrowBook
+                .Where(b => b.usrId == userId)
+                .ToListAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"加载借阅信息时出错：{ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task returnBook(BorrowBook borrowBook)
+    {
+        try
+        {
+            var book = await _context.Books.FindAsync(borrowBook.bookId);
+            var user = await _context.Customer.FindAsync(GetCurrentUserId());
+
+            if (book == null || user == null)
+            {
+                await JS.InvokeVoidAsync("alert", "归还失败，请稍后重试！");
+                return;
+            }
+
+            // 更新书籍状态和用户信息
+            book.Enabled = true;
+            user.CurrentNum -= 1;
+
+            // 删除借阅记录并保存更改
+            borrowedBooks.Remove(borrowBook);
+            _context.BorrowBook.Remove(borrowBook);
+            await _context.SaveChangesAsync();
+
+            await JS.InvokeVoidAsync("alert", $"{book.Title} 已成功归还！");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"归还书籍时出错：{ex.Message}");
+            await JS.InvokeVoidAsync("alert", "归还失败，请稍后重试！");
+        }
+    }
+
+    private int GetCurrentUserId()
+    {
+        if (AuthenticationService?._currentCustomer == null)
+        {
+            throw new InvalidOperationException("用户未登录，无法获取用户 ID。");
+        }
+        return AuthenticationService._currentCustomer.Id;
+    }
+
+    private void RedirectToLogin()
+    {
+        if (Navigation.Uri != "/login")
+        {
+            Navigation.NavigateTo("/login");
+        }
+    }
+
+    private void CloseModal()
+    {
+        showModal = false; // 关闭模态框
+    }
+}
+
+
+<style>
+    /* 按钮的 hover 效果 */
+    .btn-danger:hover {
+        background-color: #c82333;
+        /* 更深的红色 */
+        border-color: #bd2130;
+        /* 更深的边框 */
+        cursor: pointer;
+    }
+
+    /* 表格行 hover 效果 */
+    .table tbody tr:hover {
+        background-color: #f1f1f1;
+    }
+
+
+    .modal-content {
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+        background-image: linear-gradient(45deg, #4e73df, #224abe);
+    }
+
+    .modal-body p.lead {
+        font-size: 1.2rem;
+        font-weight: 500;
+        color: #333;
+    }
+
+    .modal-footer .btn {
+        transition: background-color 0.3s, transform 0.3s;
+    }
+
+    .modal-footer .btn:hover {
+        background-color: #1a5d9c;
+        transform: translateY(-2px);
+    }
+</style>

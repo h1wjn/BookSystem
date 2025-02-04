@@ -1,0 +1,52 @@
+﻿@inherits LayoutComponentBase
+
+
+<div class="sidebar">
+    <NavMenu />
+</div>
+<div class="main">
+    <div class="top-row px-4">
+        @if (!AuthService.IsLoggedIn)
+        {
+            <NavLink class="nav-link" href="Login">
+                <span class="oi oi-location" aria-hidden="true"></span> 登录
+            </NavLink>
+            <NavLink class="nav-link" href="Register">
+                <span class="oi oi-location" aria-hidden="true"></span> 注册
+            </NavLink>
+        }
+        else
+        {
+            <button class="nav-link btn btn-link" @onclick="Logout">
+                <span class="oi oi-location" aria-hidden="true"></span> 登出
+            </button>
+        }
+    </div>
+    <div class="content px-4">
+        @Body
+    </div>
+</div>
+
+@code {
+    [Inject]
+    private AuthenticationService AuthService { get; set; }
+
+    [Inject]
+    private NavigationManager Navigation { get; set; }
+
+    protected override void OnInitialized()
+    {
+        AuthService.OnChange += StateHasChanged;  // 订阅事件
+    }
+
+    private void Logout()
+    {
+        AuthService.Logout();
+        Navigation.NavigateTo("/login"); // 重定向到主页或登录页
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnChange -= StateHasChanged; // 取消订阅事件
+    }
+}

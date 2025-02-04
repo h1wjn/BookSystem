@@ -1,0 +1,66 @@
+﻿@using Microsoft.EntityFrameworkCore.Metadata.Internal
+@inject AuthenticationService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+@using Microsoft.JSInterop
+<div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand" href="">图书管理系统</a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <ul class="nav flex-column">
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> Home
+            </NavLink>
+        </li>
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="bookList">
+                <span class="oi oi-menu" aria-hidden="true"></span> 图书列表
+            </NavLink>
+        </li>
+        
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="bookmanage">
+                <span class="oi oi-menu" aria-hidden="true"></span> 图书管理
+            </NavLink>
+        </li>
+
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="issueCard">
+                <span class="oi oi-menu" aria-hidden="true"></span> 办借书卡
+            </NavLink>
+        </li>
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="returnBook">
+                <span class="oi oi-menu" aria-hidden="true"></span> 归还书籍
+            </NavLink>
+        </li>
+    </ul>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    
+    protected override void OnInitialized()
+    {
+        StateHasChanged();
+    }
+
+    }
+    
+
+}
